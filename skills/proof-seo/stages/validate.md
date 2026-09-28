@@ -23,7 +23,12 @@ python3 "${CLAUDE_PLUGIN_ROOT}/scripts/diff.py" .proof-seo/<run-id>/before.json 
 ```
 
 `--site` stays the production URL so paths and canonicals are interpreted
-as the real site; `--origin` is where they're fetched from. `--paths-from`
+as the real site; `--origin` is where they're fetched from. If the app routes by
+domain (a Laravel `Route::domain`, a multi-site CMS), add `--host-header
+<production host>` so the preview answers as the real site. If it builds
+absolute URLs from the request's scheme, serve the preview as HTTPS too (for
+PHP's built-in server, a router script that sets `$_SERVER['HTTPS'] = 'on'`),
+or every canonical will show up as changed. `--paths-from`
 makes the comparison over exactly the same pages.
 
 Expect differences that come from the environment, not the change: a local

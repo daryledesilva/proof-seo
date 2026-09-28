@@ -15,7 +15,7 @@ Two ideas matter more than the rest:
   comparison is always over the same pages rather than whatever a second crawl
   happened to find.
 
-Standard library only (Python 3.10+). Raw HTML is what gets parsed, because
+Standard library only (Python 3.8+). Raw HTML is what gets parsed, because
 that is what a server-rendered site actually serves; pass --browser to also
 capture the JavaScript-rendered DOM for client-rendered sites.
 
@@ -63,13 +63,19 @@ def _opener(insecure: bool) -> urllib.request.OpenerDirector:
     return urllib.request.build_opener(urllib.request.HTTPSHandler(context=ctx), _NoRedirect)
 
 
+HOST_HEADER = None  # set from --host-header: the Host the origin should see
+
+
 def fetch(opener, url: str, timeout: float, max_hops: int = 10) -> dict:
     """GET a URL, following redirects by hand so every hop is recorded."""
     chain = []
     current = url
     started = time.monotonic()
     for _ in range(max_hops + 1):
-        req = urllib.request.Request(current, headers={"User-Agent": USER_AGENT, "Accept-Encoding": "gzip"})
+        headers = {"User-Agent": USER_AGENT, "Accept-Encoding": "gzip"}
+        if HOST_HEADER and urllib.parse.urlsplit(current).netloc == urllib.parse.urlsplit(url).netloc:
+            headers["Host"] = HOST_HEADER
+        req = urllib.request.Request(current, headers=headers)
         try:
             resp = opener.open(req, timeout=timeout)
             status, headers, body = resp.status, resp.headers, resp.read()
@@ -350,10 +356,14 @@ def main() -> int:
     ap.add_argument("--timeout", type=float, default=30)
     ap.add_argument("--browser", help="Headless Chromium binary; also capture the rendered DOM")
     ap.add_argument("--insecure", action="store_true", help="Skip TLS verification (local self-signed certs)")
+    ap.add_argument("--host-header", help="Host header to send to --origin, for apps that route by domain "
+                    "(e.g. --origin http://127.0.0.1:8000 --host-header example.com)")
     ap.add_argument("--label", default="", help="Free-text label stored in the snapshot (e.g. before, after)")
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
 
+    global HOST_HEADER
+    HOST_HEADER = args.host_header
     site = args.site.rstrip("/")
     origin = (args.origin or args.site).rstrip("/")
     site_parts = urllib.parse.urlsplit(site)
