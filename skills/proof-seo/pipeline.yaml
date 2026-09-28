@@ -1,0 +1,98 @@
+# Pipeline: improve-seo
+#
+# Read by the agent, not executed. Work through the stages in order: read the
+# stage's skill, run its scripts, check its output, move on. Every `type: human`
+# stage has three outcomes (approve, reject-and-retry, stop), and "stop" is
+# always a visible option in the AskUserQuestion call. See
+# references/approval-policy.md.
+#
+# Run files: .proof-seo/<run-id>/ in the target project.
+
+name: improve-seo
+version: 1
+
+stages:
+  - id: discover
+    skill: stages/discover.md
+    steps:
+      - brief:      { note: "fill references/brief.md's shape; ask only for what can't be found" }
+      - prereqs:    { note: "Python 3.10+, claude-seo installed (/seo doctor); install steps in README if missing" }
+      - codebase:   { note: "framework, where head tags are emitted, how to run it locally" }
+      - baseline:   { script: scripts/snapshot.py, note: "production snapshot = the before-state and the contract" }
+    produces: [brief.json, before.json]
+    gate: none
+
+  - id: audit
+    skill: stages/audit.md
+    steps:
+      - mechanical: { script: scripts/check.py, note: "cited, evidence-backed findings" }
+      - authority:  { note: "claude-seo /seo audit (or the narrower /seo commands) for judgment calls" }
+      - verify:     { note: "every authority finding confirmed in the raw HTML before it goes further" }
+    reads: [before.json]
+    produces: [findings.json, audit.md]
+    gate: none
+
+  - id: plan-batches
+    skill: stages/plan-batches.md
+    steps:
+      - group:      { note: "findings -> batches of one kind of change each" }
+      - write:      { note: "exact after-values for every page, per references/batch-schema.md" }
+      - gate-page:  { script: scripts/build_gate_page.py }
+    reads: [before.json, findings.json, audit.md]
+    produces: [plan.json, gate/]
+    gate: none
+
+  - id: gate-1
+    type: human
+    title: "Which batches?"
+    # Serve gate/ over HTTP, open gate.html, then AskUserQuestion (multiSelect):
+    #   - up to 3 batches (label + page count + the one-line why)
+    #   - "Stop here"
+    # "Show me the other batches" and "change a value first" go through the
+    # built-in free-text answer; the policy explains how to handle both.
+    on_approve: continue          # mark chosen batches "approved": true in plan.json
+    on_reject: return_to(plan-batches)
+    on_stop: halt
+
+  - id: implement
+    skill: stages/implement.md
+    steps:
+      - branch:     { note: "proof-seo/<run-id>, one commit per batch" }
+      - change:     { note: "through the site's existing SEO mechanism" }
+    reads: [plan.json]
+    produces: [a branch with one commit per approved batch]
+    gate: none
+
+  - id: validate
+    skill: stages/validate.md
+    steps:
+      - preview:    { note: "run the branch locally or on staging" }
+      - after:      { script: scripts/snapshot.py, args: "--origin <preview> --paths-from before.json" }
+      - diff:       { script: scripts/diff.py, args: "--plan plan.json" }
+      - report:     { script: scripts/build_report.py, args: "--status preview" }
+    reads: [before.json, plan.json]
+    produces: [after.json, diff.json, report.html]
+    on_fail: return_to(implement)   # the human never sees a FAIL at gate 2
+    gate: none
+
+  - id: gate-2
+    type: human
+    title: "Ship it?"
+    # Open report.html first. AskUserQuestion:
+    #   - "Open a pull request"
+    #   - "Open a pull request and deploy"   (only if a deploy path is known)
+    #   - "Change something first"
+    #   - "Stop here"
+    on_approve: continue
+    on_reject: return_to(implement)
+    on_stop: halt
+
+  - id: report
+    skill: stages/report.md
+    steps:
+      - live:       { script: scripts/snapshot.py, note: "after deploy only: production, --paths-from before.json" }
+      - diff:       { script: scripts/diff.py }
+      - report:     { script: scripts/build_report.py, args: "--status live-verified | implemented" }
+      - follow-up:  { note: "offer a reminder for the Search Console check; never schedule without a yes" }
+    produces: [live.json, diff-live.json, report.html]
+    gate: none

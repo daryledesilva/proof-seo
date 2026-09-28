@@ -1,0 +1,12 @@
+{
+  "name": "proof-seo",
+  "version": "0.1.0",
+  "description": "SEO changes you can prove. Snapshots what search engines actually receive, shows each proposed fix as the exact values that will ship, implements only what you approve, then proves every promise landed and nothing broke.",
+  "author": {
+    "name": "Daryle Dale De Silva",
+    "url": "https://github.com/daryledesilva"
+  },
+  "license": "Apache-2.0",
+  "repository": "https://github.com/daryledesilva/proof-seo",
+  "keywords": ["seo", "technical-seo", "structured-data", "schema-markup", "regression-testing", "validation", "human-in-the-loop"]
+}

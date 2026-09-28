@@ -1,0 +1,22 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  fixture:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.8", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python tests/test_fixture.py
+      - name: rules.md matches check.py
+        run: |
+          python scripts/check.py --rules > /tmp/rules-table.md
+          diff <(grep '^|' skills/proof-seo/references/rules.md) /tmp/rules-table.md

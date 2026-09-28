@@ -1,0 +1,23 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "daryledesilva-proof-seo",
+  "owner": {
+    "name": "Daryle Dale De Silva"
+  },
+  "metadata": {
+    "description": "proof-seo: SEO changes you can prove."
+  },
+  "plugins": [
+    {
+      "name": "proof-seo",
+      "source": "./",
+      "description": "SEO changes you can prove. Snapshots what search engines actually receive, shows each proposed fix as the exact values that will ship, implements only what you approve, then proves every promise landed and nothing broke.",
+      "author": {
+        "name": "Daryle Dale De Silva",
+        "url": "https://github.com/daryledesilva"
+      },
+      "category": "marketing",
+      "keywords": ["seo", "technical-seo", "structured-data", "validation"]
+    }
+  ]
+}
