@@ -137,8 +137,9 @@ def main() -> int:
         breach("sitemap-removed", "/sitemap.xml", "FAIL", "the sitemap listed pages before and lists none now", len(b_sm), 0)
     elif b_sm - a_sm:
         breach("sitemap-paths-removed", "/sitemap.xml", "REVIEW", f"{len(b_sm - a_sm)} path(s) no longer listed", sorted(b_sm - a_sm)[:20], None)
-    b_dis = {(r["path"]) for g in before["robots"]["parsed"]["groups"] for r in g["rules"] if r["type"] == "disallow"}
-    a_dis = {(r["path"]) for g in after["robots"]["parsed"]["groups"] for r in g["rules"] if r["type"] == "disallow"}
+    # An empty "Disallow:" allows everything (RFC 9309), so it isn't a restriction.
+    b_dis = {r["path"] for g in before["robots"]["parsed"]["groups"] for r in g["rules"] if r["type"] == "disallow" and r["path"]}
+    a_dis = {r["path"] for g in after["robots"]["parsed"]["groups"] for r in g["rules"] if r["type"] == "disallow" and r["path"]}
     if a_dis - b_dis:
         breach("robots-disallow-added", "/robots.txt", "REVIEW", "new Disallow rules", sorted(b_dis), sorted(a_dis))
 
